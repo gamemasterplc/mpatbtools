@@ -174,7 +174,7 @@ int main(int argc, char** argv)
 	char xml_name[256];
 	mxml_node_t *xml;    /* <?xml ... ?> */
 	mxml_node_t *data;   /* <data> */
-	mxml_node_t *group;   /* <data> */
+	mxml_node_t *group = NULL;   /* <data> */
 	mxml_node_t *node;   /* <node> */
 	int tpl_path_len;
 	int xml_path_len;
@@ -546,6 +546,8 @@ int main(int argc, char** argv)
 				mxmlNewInteger(node, parsed_layers[curr_layer_idx + j].lower_left_vertex_y);
 			}
 		}
+		data = mxmlNewElement(xml, "texture");
+		mxmlNewText(data, NULL, tpl_name);
 		mxmlSaveFile(xml, xml_fptr, WhitespaceCallback);
 		fclose(tpl_fptr);
 		fclose(xml_fptr);

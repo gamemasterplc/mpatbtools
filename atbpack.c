@@ -146,6 +146,7 @@ typedef struct tpl_palette_header {
 } TplPaletteHeader;
 
 int main(int argc, char **argv);
+int GetLastSlashPos(char *string);
 int GetTextureFormatBpp(int gx_format);
 int GxtoAtbTextureFormat(int gx_format);
 int FindStringinArray(char **str_array, char *str, int array_entries);
@@ -162,7 +163,7 @@ void WriteFileFloatBigEndian(FILE *fp, int offset, float num);
 int main(int argc, char **argv)
 {
 	FILE *out_fptr;
-	FILE *tpl_fptr;
+	FILE *tpl_fptr = NULL;
 	FILE *xml_fptr;
 	mxml_node_t *tree;
 	mxml_node_t *bank_node;
@@ -170,6 +171,7 @@ int main(int argc, char **argv)
 	mxml_node_t *pattern_node;
 	mxml_node_t *layer_node;
 	mxml_node_t *temp_node;
+	mxml_node_t *tex_node;
 	int num_banks = 0;
 	int num_frames = 0;
 	int num_patterns = 0;
@@ -186,6 +188,8 @@ int main(int argc, char **argv)
 	char **frame_names;
 	char **pattern_names;
 	char **layer_names;
+	char tmp_path[256];
+	char tex_path[256];
 	AtbBankData *banks;
 	AnimFrame *frames;
 	AtbPatternData *patterns;
@@ -194,32 +198,47 @@ int main(int argc, char **argv)
 	void *bitmap = malloc(4194304); //Size of RGBA8 image of 1024x1024 size
 	void *palette = malloc(8192); //Allocate Room for 16 256-Color Palettes
 
-	if (argc >= 4)
+	if (argc >= 3)
 	{
 		out_fptr = fopen(argv[1], "wb");
-		tpl_fptr = fopen(argv[2], "rb");
-		xml_fptr = fopen(argv[3], "r");
+		xml_fptr = fopen(argv[2], "r");
 		if (out_fptr == NULL)
 		{
 			printf("Failed to Open File %s for writing.", argv[1]);
 			getchar();
 			return 0;
 		}
-		if (tpl_fptr == NULL)
+		if (xml_fptr == NULL)
 		{
 			printf("Failed to Open File %s for reading.", argv[2]);
 			getchar();
 			return 0;
 		}
-		if (xml_fptr == NULL)
-		{
-			printf("Failed to Open File %s for reading.", argv[3]);
-			getchar();
-			return 0;
-		}
+
 		tree = mxmlLoadFile(NULL, xml_fptr, MXML_TEXT_CALLBACK);
 		fclose(xml_fptr);
 		bank_node = mxmlFindElement(tree, tree, "banks", NULL, NULL, MXML_DESCEND);
+		tex_node = mxmlFindElement(tree, tree, "texture", NULL, NULL, MXML_DESCEND);
+		temp_node = mxmlGetFirstChild(tex_node);
+		char *tmp_name = mxmlGetText(temp_node, NULL);
+		int slash_pos = GetLastSlashPos(argv[2]);
+		if (slash_pos == -1)
+		{
+			tmp_path[slash_pos + 1] = '\0';
+		}
+		else
+		{
+			strncpy(tmp_path, argv[2], slash_pos+1);
+			tmp_path[slash_pos + 1] = '\0';
+		}
+		sprintf(tex_path, "%s%s", tmp_path, tmp_name);
+		tpl_fptr = fopen(tex_path, "rb");
+		if (tpl_fptr == NULL)
+		{
+			printf("Failed to Open File %s for reading.", tex_path);
+			getchar();
+			return 0;
+		}
 		temp_node = mxmlGetFirstChild(bank_node);
 		while (temp_node)
 		{
@@ -690,6 +709,8 @@ int main(int argc, char **argv)
 		}
 		fclose(out_fptr);
 		fclose(tpl_fptr);
+		free(bitmap);
+		free(palette);
 		return 1;
 	}
 	else
@@ -698,6 +719,22 @@ int main(int argc, char **argv)
 		getchar();
 		return 0;
 	}
+}
+
+int GetLastSlashPos(char *string)
+{
+	int slash_loc = -1;
+	int curr_string_loc = 0;
+	while (*string != '\0')
+	{
+		if (*string == '\\' || *string == '/')
+		{
+			slash_loc = curr_string_loc;
+		}
+		curr_string_loc++;
+		string++;
+	}
+	return slash_loc;
 }
 
 int GetTextureFormatBpp(int gx_format)
